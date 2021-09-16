@@ -14,7 +14,7 @@ Getting Started
 $ docker --version
 ```
 
-3. Add the list of IP addresses or CIDRS you wish to scan to `shared/ips.txt`.
+3. Add the list of IP addresses or CIDRS you wish to scan to `shared/ips.txt`!!!
 
 4. Build the container:
 ```bash
