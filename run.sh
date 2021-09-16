@@ -18,7 +18,7 @@ then
 fi
 
 xml_dir=xml_files/$current_time
-report_file=reports/report_$current_time.$report_extension
+report_file=reports/output.json
 
 function upload {
     if [[ -z $upload ]]
