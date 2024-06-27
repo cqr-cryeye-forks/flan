@@ -1,57 +1,61 @@
-#!/bin/sh
+#!/bin/bash
 
+# Get the current time formatted as "YYYY.MM.DD-HH.MM"
 current_time=$(date "+%Y.%m.%d-%H.%M")
-if [[ -z $upload ]]
-then
+
+# Set root directory based on the upload variable
+if [ -z "$upload" ]; then
     root_dir=/shared/
 else
     root_dir=/
-    mkdir /xml_files
-    mkdir /reports
+    mkdir -p /xml_files
+    mkdir -p /reports
 fi
 
-report_extension="tex"
+# Set report extension, default to "tex" if format is not specified
+report_extension="${format:-tex}"
 
-if [[ ! -z $format ]]
-then
-    report_extension=$format
-fi
+# Define directories and report file
+xml_dir="/xml_files/$current_time"
+report_file="/reports/output.json"
 
-xml_dir=xml_files/$current_time
-report_file=reports/output.json
-
-function upload {
-    if [[ -z $upload ]]
-    then
+# Function to upload files to cloud storage
+upload() {
+    if [ -z "$upload" ]; then
         return
-    elif [ $upload = "aws" ]
-    then
-        python /aws_push.py $1
-    elif [ $upload = "gcp" ]
-    then
-        python /gcp_push.py $1
+    elif [ "$upload" = "aws" ]; then
+        python /aws_push.py "$1"
+    elif [ "$upload" = "gcp" ]; then
+        python /gcp_push.py "$1"
     fi
 }
 
-function get_filename(){
-    echo $1 | tr / -
+# Function to get a filename-safe version of a string
+get_filename() {
+    echo "$1" | tr / -
 }
 
-mkdir $root_dir$xml_dir
-while IFS= read -r line
-do
-  current_time=$(date "+%Y.%m.%d-%H.%M.%S")
-  filename=$(get_filename $line)".xml"
-  nmap -sV -oX $root_dir$xml_dir/$filename -oN - -v1 $@ --script=vulners/vulners.nse $line
-  upload $xml_dir/$filename
+# Create necessary directories
+mkdir -p "$root_dir$xml_dir"
+
+# Read lines from the input file and process each IP
+while IFS= read -r line; do
+    current_time=$(date "+%Y.%m.%d-%H.%M.%S")
+    filename=$(get_filename "$line").xml
+    nmap -sV -oX "$root_dir$xml_dir/$filename" -oN - -v1 "$@" --script=vulners/vulners.nse "$line"
+    upload "$xml_dir/$filename"
 done < /shared/ips.txt
 
-python /output_report.py $root_dir$xml_dir $root_dir$report_file /shared/ips.txt
-if [[ $report_extension = "tex" ]]
-then
-    sed -i 's/_/\\_/g' $root_dir$report_file
-    sed -i 's/\$/\\\$/g' $root_dir$report_file
-    sed -i 's/#/\\#/g' $root_dir$report_file
-    sed -i 's/%/\\%/g' $root_dir$report_file
+# Generate the output report
+python /output_report.py "$root_dir$xml_dir" "$root_dir$report_file" /shared/ips.txt
+
+# Apply text replacements for LaTeX if the report extension is "tex"
+if [ "$report_extension" = "tex" ]; then
+    sed -i 's/_/\\_/g' "$root_dir$report_file"
+    sed -i 's/\$/\\\$/g' "$root_dir$report_file"
+    sed -i 's/#/\\#/g' "$root_dir$report_file"
+    sed -i 's/%/\\%/g' "$root_dir$report_file"
 fi
-upload $report_file
+
+# Upload the final report file
+upload "$report_file"
