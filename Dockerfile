@@ -1,4 +1,4 @@
-FROM python:3.9-alpine
+FROM python:3.12-alpine3.19
 
 COPY aws_push.py gcp_push.py output_report.py requirements.txt run.sh /
 COPY contrib /contrib
